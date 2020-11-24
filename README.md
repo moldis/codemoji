@@ -27,6 +27,8 @@ The following open-source libraries were also used in developing the website:
 
 ### Development
 
+	npm install natives
+	npm update
 	npm install
 	bower intall
 	grunt dev
