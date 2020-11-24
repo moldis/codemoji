@@ -19,17 +19,25 @@ var replace = require('gulp-replace');
 // File where the favicon markups are stored
 var FAVICON_DATA_FILE = 'cache/faviconData.json';
 
-gulp.task('copy:fonts', ['clean'], function() {
+function clean(){
+  return del([
+    'public/**/**/*',
+    // don't remove .gitkeep
+    '!public/.gitkeep'
+  ]);
+}
+
+gulp.task('copy:fonts', gulp.series(clean, function(){
   return gulp.src('assets/css/font/**/*.{ttf,woff,woff2,eot,svg}')
       .pipe(gulp.dest('public/font'));
-});
+}));
 
-gulp.task('copy:cname', ['clean'], function() {
+gulp.task('copy:cname', gulp.series(clean, function(){
   return gulp.src('assets/CNAME')
       .pipe(gulp.dest('public/'));
-});
+}));
 
-gulp.task('copy:assets', ['clean'], function() {
+gulp.task('copy:assets', gulp.series(clean, function(){
   var assets_paths = [
     'assets/svg/*',
     'assets/img/**/*',
@@ -40,17 +48,14 @@ gulp.task('copy:assets', ['clean'], function() {
   
   return gulp.src(assets_paths)
              .pipe(copy('public'));
-});
+}));
 
-gulp.task('copy:favicon', ['clean'], function() {
+gulp.task('copy:favicon', gulp.series(clean, function(){
   return gulp.src('cache/favicon/*')
       .pipe(gulp.dest('public'));
-});
+}));
 
-
-
-gulp.task('minify', ['clean'], function() {
-
+gulp.task('minify', gulp.series(clean, function(){
   var cleancssOpt = {advanced:false, aggressiveMerging:false, restructuring:false}
   var processors = [autoprefixer({browsers: ['last 3 version']})];
 
@@ -60,22 +65,25 @@ gulp.task('minify', ['clean'], function() {
         vendorjs: [ uglify ]
       }))
       .pipe(gulp.dest('public'));
-});
+}));
 
 
-gulp.task('clean', function() {
-  return del([
-    'public/**/**/*',
-    // don't remove .gitkeep
-    '!public/.gitkeep'
-  ]);
-});
+//gulp.task('clean', function() {
+//gulp.task('clean', gulp.series(clean, function(){
+//  return del([
+//    'public/**/**/*',
+//    // don't remove .gitkeep
+//    '!public/.gitkeep'
+//  ]);
+//}));
+
 
 // Generate the icons. This task takes a few seconds to complete. 
 // You should run it at least once to create the icons. Then, 
 // you should run it whenever RealFaviconGenerator updates its 
 // package (see the check-for-favicon-update task below).
-gulp.task('generate-favicon', function(done) {
+//gulp.task('generate-favicon', function(done) {
+gulp.task('generate-favicon', gulp.series(clean,async function(){
   realFavicon.generateFavicon({
     masterPicture: 'favicon.svg',
     dest: 'cache/favicon',
@@ -117,13 +125,10 @@ gulp.task('generate-favicon', function(done) {
   }, function() {
     done();
   });
-});
+}));
 
 
-
-
-
-gulp.task('finalhtml', ['copy:assets'], function(){
+gulp.task('finalhtml', gulp.series('copy:assets',async function(){
 
   var htmlminopt = {collapseWhitespace: true, removeComments:true}
   var env;
@@ -169,10 +174,11 @@ gulp.task('finalhtml', ['copy:assets'], function(){
     .pipe(replace('<link rel="stylesheet" href="style.css">', ''))
     .pipe(htmlmin(htmlminopt))
     .pipe(gulp.dest('public/'))
-})
+}))
 
 
 
+var all = gulp.parallel(clean, 'copy:fonts', 'copy:cname', 'copy:favicon', 'copy:assets', 'minify', 'finalhtml');
+gulp.task('build', gulp.series(clean, all));
 
-gulp.task('build', ['clean', 'copy:fonts', 'copy:cname', 'copy:favicon', 'copy:assets', 'minify', 'finalhtml']);
-gulp.task('favicon', ['generate-favicon']);
+gulp.task('favicon', gulp.series(clean, 'generate-favicon'));
